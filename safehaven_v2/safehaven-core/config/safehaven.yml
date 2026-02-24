@@ -1,0 +1,12 @@
+sample_fps: 1
+left_open_minutes: 7
+queue_max: 50
+metrics_port: 9108
+
+cameras:
+  - name: front_entry
+    stream_url: rtsp://user:pass@camera.example.local:554/stream2
+    rois:
+      garage: {x: 0.05, y: 0.20, w: 0.40, h: 0.70}
+      gate: {x: 0.50, y: 0.20, w: 0.20, h: 0.70}
+      latch: {x: 0.72, y: 0.35, w: 0.12, h: 0.20}

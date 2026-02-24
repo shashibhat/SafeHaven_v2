@@ -1,0 +1,22 @@
+mqtt:
+  enabled: true
+  host: mosquitto
+
+detectors:
+  cpu1:
+    type: cpu
+
+objects:
+  track:
+    - person
+
+cameras:
+  demo:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/demo
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: false
