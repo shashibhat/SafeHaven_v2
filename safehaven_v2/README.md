@@ -98,20 +98,7 @@ curl http://localhost:8090/readyz
 - Watch `safehaven-core` logs for successful calls to:
   - `POST /api/events/{camera}/{label}/create`
 
-## Local Demo Without Frigate
 
-Run a full demo with:
-- mocked Frigate Create Event endpoint
-- mock Metis detections (`MOCK=1`)
-- generated demo video source
-
-```bash
-make demo-mock
-```
-
-Expected result:
-- terminal shows `[mock-frigate] POST /api/events/.../create` calls
-- semantic transitions and left-open events are emitted
 
 ## Frigate Metis Detector Plugin
 
