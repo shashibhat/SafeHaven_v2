@@ -1,15 +1,20 @@
+import datetime
 import json
 import logging
+import os
 import queue
+import sys
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit, urlunsplit
 
 import cv2
 import numpy as np
 import requests
 
-from .config import AppConfig, CameraConfig, ROI, load_config
+from .config import AppConfig, CameraConfig, load_config
 from .frigate_api import FrigateApi
 from .metrics import DROPPED_SAMPLES, E2E_MS, INFER_MS, QUEUE_DEPTH, SEMANTIC_EVENTS, start_metrics_server
 from .rtsp_sampler import crop_roi, sample_stream
@@ -41,6 +46,98 @@ ZONE_SPECS = {
 class CameraRuntime:
     camera: CameraConfig
     queue: queue.Queue
+
+
+@dataclass
+class ReadinessState:
+    ready: bool = False
+    details: dict[str, bool] = field(default_factory=dict)
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+            "thread": record.threadName,
+        }
+        if record.exc_info:
+            payload["exc"] = self.formatException(record.exc_info)
+        return json.dumps(payload, separators=(",", ":"))
+
+
+def _setup_logging(log_level: str, log_format: str) -> None:
+    level = getattr(logging, log_level.upper(), logging.INFO)
+    handler = logging.StreamHandler(sys.stdout)
+    if log_format.lower() == "json":
+        handler.setFormatter(JsonFormatter())
+    else:
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s - %(message)s"))
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(level)
+
+
+def _metis_health_url(detect_url: str) -> str:
+    parsed = urlsplit(detect_url)
+    path = parsed.path
+    if path.endswith("/detect"):
+        path = f"{path.rsplit('/', 1)[0]}/healthz"
+    else:
+        path = "/healthz"
+    return urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+
+def _is_http_up(url: str, timeout: float = 2.0) -> bool:
+    try:
+        response = requests.get(url, timeout=timeout)
+        return response.status_code < 500
+    except requests.RequestException:
+        return False
+
+
+def _start_health_server(port: int, readiness: ReadinessState) -> None:
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            if self.path == "/healthz":
+                self._send(200, {"ok": True})
+                return
+            if self.path == "/readyz":
+                status = 200 if readiness.ready else 503
+                self._send(status, {"ready": readiness.ready, "dependencies": readiness.details})
+                return
+            self._send(404, {"error": "not found"})
+
+        def _send(self, status: int, body: dict) -> None:
+            payload = json.dumps(body).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, _format, *_args):
+            return
+
+    server = ThreadingHTTPServer(("0.0.0.0", port), HealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True, name="health-server").start()
+
+
+def _start_dependency_probe(config: AppConfig, readiness: ReadinessState) -> None:
+    def _probe_loop() -> None:
+        frigate_url = f"{config.frigate_base_url.rstrip('/')}/api/version"
+        metis_url = _metis_health_url(config.metis_detector_url)
+        while True:
+            frigate_ok = _is_http_up(frigate_url)
+            metis_ok = _is_http_up(metis_url)
+            readiness.details = {"frigate": frigate_ok, "metis_detector": metis_ok}
+            readiness.ready = frigate_ok and metis_ok
+            time.sleep(5)
+
+    threading.Thread(target=_probe_loop, daemon=True, name="dependency-probe").start()
 
 
 def _default_zone_class_ids() -> dict[str, dict[str, int]]:
@@ -198,11 +295,11 @@ def _camera_worker(config: AppConfig, camera_runtime: CameraRuntime, frigate: Fr
 
 
 def run() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
-    )
     config = load_config()
+    _setup_logging(log_level=config.log_level, log_format=config.log_format)
+    readiness = ReadinessState()
+    _start_health_server(config.health_port, readiness)
+    _start_dependency_probe(config, readiness)
     start_metrics_server(config.metrics_port)
     frigate = FrigateApi(config.frigate_base_url)
 
@@ -226,7 +323,14 @@ def run() -> None:
             name=f"worker-{runtime.camera.name}",
         ).start()
 
-    LOGGER.info("safehaven-core started cameras=%s metrics_port=%s", [c.name for c in config.cameras], config.metrics_port)
+    LOGGER.info(
+        "safehaven-core started cameras=%s metrics_port=%s health_port=%s log_format=%s pid=%s",
+        [c.name for c in config.cameras],
+        config.metrics_port,
+        config.health_port,
+        config.log_format,
+        os.getpid(),
+    )
     while True:
         time.sleep(1)
 

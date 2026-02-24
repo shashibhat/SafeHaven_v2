@@ -1,7 +1,11 @@
+import datetime
+import json
+import logging
 import os
 from pathlib import Path
 from threading import Lock
 from typing import List
+import sys
 
 import cv2
 import numpy as np
@@ -15,11 +19,40 @@ except Exception:  # pragma: no cover
 app = FastAPI(title="metis-detector", version="0.1.0")
 _model_lock = Lock()
 _model = None
+LOGGER = logging.getLogger("metis-detector")
 
 
 class Config:
     mock = os.getenv("MOCK", "1") == "1"
     model_dir = os.getenv("MODEL_DIR", "")
+    log_format = os.getenv("LOG_FORMAT", "text")
+    log_level = os.getenv("LOG_LEVEL", "INFO")
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+        }
+        if record.exc_info:
+            payload["exc"] = self.formatException(record.exc_info)
+        return json.dumps(payload, separators=(",", ":"))
+
+
+def _setup_logging() -> None:
+    level = getattr(logging, Config.log_level.upper(), logging.INFO)
+    handler = logging.StreamHandler(sys.stdout)
+    if Config.log_format.lower() == "json":
+        handler.setFormatter(JsonFormatter())
+    else:
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s - %(message)s"))
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(level)
 
 
 def _resolve_model_path(model_dir: str) -> str:
@@ -50,9 +83,27 @@ def _mock_detection() -> List[List[float]]:
     return [[0, 0.95, 0.2, 0.2, 0.8, 0.8]]
 
 
+@app.on_event("startup")
+def on_startup():
+    _setup_logging()
+    LOGGER.info("metis-detector startup mock=%s model_dir=%s", Config.mock, Config.model_dir)
+
+
 @app.get("/healthz")
 def healthz():
     return {"ok": True, "mock": Config.mock}
+
+
+@app.get("/readyz")
+def readyz():
+    if Config.mock:
+        return {"ready": True, "mode": "mock"}
+    try:
+        _get_model()
+        return {"ready": True, "mode": "inference"}
+    except Exception as exc:
+        LOGGER.warning("readyz failed err=%s", exc)
+        raise HTTPException(status_code=503, detail=f"Model not ready: {exc}")
 
 
 @app.post("/detect")

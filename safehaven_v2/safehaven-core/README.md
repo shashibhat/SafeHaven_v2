@@ -25,6 +25,9 @@ Reads env + YAML (`SAFEHAVEN_CONFIG`, default `/config/safehaven.yml`):
 - `LEFT_OPEN_MINUTES` (default `7`)
 - `QUEUE_MAX` (default `50`)
 - `METRICS_PORT` (default `9108`)
+- `HEALTH_PORT` (default `9109`)
+- `LOG_FORMAT` (`text` or `json`, default `text`)
+- `LOG_LEVEL` (default `INFO`)
 
 ## Local run
 
@@ -40,3 +43,8 @@ safehaven-core
 ```
 
 Requires `metis-detector` running with `MOCK=1` on `:8090`.
+
+## Health endpoints
+
+- `/healthz`: process liveness
+- `/readyz`: dependency readiness (`frigate`, `metis-detector`)

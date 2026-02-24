@@ -2,6 +2,9 @@ sample_fps: 1
 left_open_minutes: 7
 queue_max: 50
 metrics_port: 9108
+health_port: 9109
+log_format: text
+log_level: INFO
 
 cameras:
   - name: front_entry

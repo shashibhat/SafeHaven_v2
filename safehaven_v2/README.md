@@ -82,9 +82,15 @@ docker compose up --build
 ```bash
 curl http://localhost:9108/metrics | head
 ```
+- SafeHaven health/readiness:
+```bash
+curl http://localhost:9109/healthz
+curl http://localhost:9109/readyz
+```
 - Metis detector health:
 ```bash
 curl http://localhost:8090/healthz
+curl http://localhost:8090/readyz
 ```
 
 ### 4) Validate Frigate semantic event calls
@@ -134,11 +140,18 @@ Prometheus metrics exposed by SafeHaven core:
 
 - Python 3.10+ across modules
 - Containerized services for repeatable deployment
+- Runtime hardening in compose:
+  - non-root app containers (`safehaven-core`, `metis-detector`)
+  - read-only rootfs + `/tmp` tmpfs for app services
+  - dropped Linux capabilities + `no-new-privileges`
+  - health checks and startup dependency gating
+  - log rotation via Docker `json-file` driver
 - Recommended for production:
   - pin camera stream credentials via secrets manager
   - isolate IoT VLAN / local firewall rules
   - configure persistent volumes for Frigate media
   - route `/metrics` into local Prometheus + Grafana
+  - replace mutable image tags with immutable digests in `.env` (`FRIGATE_IMAGE`, `MOSQUITTO_IMAGE`)
 
 ## Documentation
 

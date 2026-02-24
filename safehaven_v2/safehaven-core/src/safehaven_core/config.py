@@ -31,6 +31,9 @@ class AppConfig:
     left_open_minutes: int
     queue_max: int
     metrics_port: int
+    health_port: int
+    log_format: str
+    log_level: str
     cameras: list[CameraConfig]
 
 
@@ -81,5 +84,8 @@ def load_config() -> AppConfig:
         left_open_minutes=int(os.getenv("LEFT_OPEN_MINUTES", yaml_data.get("left_open_minutes", 7))),
         queue_max=int(os.getenv("QUEUE_MAX", yaml_data.get("queue_max", 50))),
         metrics_port=int(os.getenv("METRICS_PORT", yaml_data.get("metrics_port", 9108))),
+        health_port=int(os.getenv("HEALTH_PORT", yaml_data.get("health_port", 9109))),
+        log_format=str(os.getenv("LOG_FORMAT", yaml_data.get("log_format", "text"))),
+        log_level=str(os.getenv("LOG_LEVEL", yaml_data.get("log_level", "INFO"))),
         cameras=cameras,
     )

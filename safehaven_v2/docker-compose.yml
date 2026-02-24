@@ -1,8 +1,6 @@
-version: "3.9"
-
 services:
   frigate:
-    image: ghcr.io/blakeblackshear/frigate:stable
+    image: ${FRIGATE_IMAGE:-ghcr.io/blakeblackshear/frigate:stable}
     container_name: frigate
     restart: unless-stopped
     shm_size: "256mb"
@@ -14,15 +12,25 @@ services:
       - frigate-media:/media/frigate
     environment:
       FRIGATE_RTSP_PASSWORD: "safehaven"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   mosquitto:
-    image: eclipse-mosquitto:2
+    image: ${MOSQUITTO_IMAGE:-eclipse-mosquitto:2}
     container_name: mosquitto
     restart: unless-stopped
     ports:
       - "1883:1883"
     volumes:
       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   metis-detector:
     build:
@@ -32,8 +40,28 @@ services:
     environment:
       - MOCK=${MOCK:-1}
       - MODEL_DIR=${MODEL_DIR:-/models/metis_yolo}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     ports:
       - "8090:8090"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/readyz', timeout=2)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   safehaven-core:
     build:
@@ -41,8 +69,10 @@ services:
     container_name: safehaven-core
     restart: unless-stopped
     depends_on:
-      - metis-detector
-      - frigate
+      metis-detector:
+        condition: service_healthy
+      frigate:
+        condition: service_started
     environment:
       - FRIGATE_BASE_URL=${FRIGATE_BASE_URL:-http://frigate:5000}
       - METIS_DETECTOR_URL=${METIS_DETECTOR_URL:-http://metis-detector:8090/detect}
@@ -51,11 +81,33 @@ services:
       - LEFT_OPEN_MINUTES=${LEFT_OPEN_MINUTES:-7}
       - QUEUE_MAX=${QUEUE_MAX:-50}
       - METRICS_PORT=${METRICS_PORT:-9108}
+      - HEALTH_PORT=${HEALTH_PORT:-9109}
       - MQTT_BROKER=${MQTT_BROKER:-mosquitto}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
       - ./safehaven-core/config:/config:ro
     ports:
       - "9108:9108"
+      - "9109:9109"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9109/healthz', timeout=2)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   frigate-media:
