@@ -1,4 +1,5 @@
 import datetime
+import io
 import json
 import logging
 import os
@@ -7,9 +8,9 @@ from threading import Lock
 from typing import List
 import sys
 
-import cv2
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request
+from PIL import Image
 
 try:
     from ultralytics import YOLO
@@ -119,9 +120,10 @@ async def detect(request: Request):
     if Config.mock:
         return _mock_detection()
 
-    image_array = np.frombuffer(body, dtype=np.uint8)
-    image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-    if image is None:
+    try:
+        pil = Image.open(io.BytesIO(body)).convert("RGB")
+        image = np.array(pil)
+    except Exception:
         raise HTTPException(status_code=400, detail="Invalid JPEG payload")
 
     model = _get_model()

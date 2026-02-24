@@ -36,7 +36,7 @@ pip install -e .
 safehaven-core
 ```
 
-## Demo
+## Local Validation
 
 ```bash
 ./scripts/demo_mock.sh

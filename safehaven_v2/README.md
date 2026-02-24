@@ -98,25 +98,25 @@ curl http://localhost:8090/readyz
 - Watch `safehaven-core` logs for successful calls to:
   - `POST /api/events/{camera}/{label}/create`
 
-## Local Demo Without Frigate
+## Local Validation Without Frigate
 
-Run a full demo with:
+Run a local integration validation with:
 - mocked Frigate Create Event endpoint
 - mock Metis detections (`MOCK=1`)
-- generated demo video source
+- generated synthetic video source
 
 ```bash
 make demo-mock
 ```
 
 Expected result:
-- terminal shows `[mock-frigate] POST /api/events/.../create` calls
+- mock Frigate logs show `POST /api/events/.../create`
 - semantic transitions and left-open events are emitted
 
 ## Frigate Metis Detector Plugin
 
 SafeHaven includes a Frigate detector plugin implemented as a single Python module:
-- [frigate-metis-plugin/metis_http.py](/Users/bytedance/personal/hackathon/security-system/SafeHaven_v2/safehaven_v2/frigate-metis-plugin/metis_http.py)
+- `frigate-metis-plugin/metis_http.py`
 
 It can be bind-mounted into Frigate plugins path and configured as detector `type: metis`.
 
@@ -155,10 +155,10 @@ Prometheus metrics exposed by SafeHaven core:
 
 ## Documentation
 
-- [Architecture Overview](/Users/bytedance/personal/hackathon/security-system/SafeHaven_v2/safehaven_v2/docs/ARCHITECTURE_V2.md)
-- [SafeHaven Core](/Users/bytedance/personal/hackathon/security-system/SafeHaven_v2/safehaven_v2/safehaven-core/README.md)
-- [Metis Detector](/Users/bytedance/personal/hackathon/security-system/SafeHaven_v2/safehaven_v2/metis-detector/README.md)
-- [Frigate Plugin](/Users/bytedance/personal/hackathon/security-system/SafeHaven_v2/safehaven_v2/frigate-metis-plugin/README.md)
+- [Architecture Overview](docs/ARCHITECTURE_V2.md)
+- [SafeHaven Core](safehaven-core/README.md)
+- [Metis Detector](metis-detector/README.md)
+- [Frigate Plugin](frigate-metis-plugin/README.md)
 
 ## Roadmap
 

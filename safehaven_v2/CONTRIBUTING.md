@@ -15,7 +15,7 @@
    ```bash
    docker compose up --build
    ```
-4. Run demo path:
+4. Run local validation path:
    ```bash
    make demo-mock
    ```
