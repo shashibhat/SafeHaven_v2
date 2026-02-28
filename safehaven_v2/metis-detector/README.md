@@ -10,21 +10,13 @@ HTTP inference sidecar for SafeHaven/Frigate Metis integration.
 - `GET /healthz`
 - `GET /readyz`
 
-## Modes
+## Runtime configuration
 
-- `MOCK=1` (default): returns a fixed detection for easy bring-up
-- `MOCK=0`: runs Ultralytics YOLO using `MODEL_DIR`
-- `LOG_FORMAT=json|text` and `LOG_LEVEL=INFO|...` control logging output
+- `MODEL_DIR`: path to the exported model artifact consumed by the service
+- `LOG_FORMAT=json|text` and `LOG_LEVEL=INFO|...`: logging controls
 
 ## Run locally
 
 ```bash
-pip install -r requirements.txt
-MOCK=1 uvicorn app:app --host 0.0.0.0 --port 8090
-```
-
-For real inference:
-
-```bash
-MOCK=0 MODEL_DIR=/path/to/axelera_exported_model uvicorn app:app --host 0.0.0.0 --port 8090
+MODEL_DIR=/path/to/axelera_exported_model uvicorn app:app --host 0.0.0.0 --port 8090
 ```

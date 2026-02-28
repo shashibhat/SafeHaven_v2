@@ -1,12 +1,11 @@
-mqtt:
-  enabled: true
-  host: mosquitto
-
 auth:
   enabled: false
 
 semantic_search:
   enabled: false
+
+ffmpeg:
+  path: /usr
 
 go2rtc:
   streams:
@@ -18,9 +17,16 @@ go2rtc:
 detectors:
   metis0:
     type: metis
-    execution: http
-    endpoint: http://metis-detector:8090/detect
-    timeout_ms: 500
+    execution: voyager
+    socket_path: /run/safehaven/metis-voyager.sock
+    voyager_python: "{FRIGATE_METIS_VOYAGER_PYTHON}"
+    voyager_sdk_root: "{FRIGATE_METIS_VOYAGER_SDK_ROOT}"
+    network: "{FRIGATE_METIS_NETWORK}"
+    timeout_ms: 1000
+    worker_start_timeout_sec: 30
+    worker_log_path: /var/log/safehaven/metis-voyager-worker.log
+    aipu_cores: 1
+    low_latency: true
 
 objects:
   track:

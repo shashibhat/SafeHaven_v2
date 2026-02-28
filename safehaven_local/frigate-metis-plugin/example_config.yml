@@ -1,5 +1,0 @@
-detectors:
-  metis0:
-    type: metis
-    endpoint: http://metis-detector:8090/detect
-    timeout_ms: 100

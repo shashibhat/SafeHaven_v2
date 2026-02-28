@@ -1,0 +1,29 @@
+mqtt:
+  enabled: false
+
+detectors:
+  metis0:
+    type: metis
+    endpoint: http://127.0.0.1:8090/detect
+    timeout_ms: 200
+
+model:
+  labelmap_path: /config/labelmap.txt
+
+ffmpeg:
+  path: /usr
+
+objects:
+  track:
+    - person
+
+# Start with no cameras, then add your RTSP cameras in the Frigate UI or by editing this file.
+cameras: {}
+
+auth:
+  enabled: false
+
+semantic_search:
+  enabled: false
+
+version: 0.18-0

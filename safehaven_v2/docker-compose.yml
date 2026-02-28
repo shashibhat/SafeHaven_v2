@@ -8,10 +8,15 @@ services:
       - "5000:5000"
       - "8971:8971"
     volumes:
-      - ./frigate/config:/config
+      - ./frigate/config/config.yml:/config/config.yml:ro
+      - ./frigate-metis-plugin/metis_http.py:/opt/frigate/frigate/detectors/plugins/metis.py:ro
       - frigate-media:/media/frigate
     environment:
-      FRIGATE_RTSP_PASSWORD: "safehaven"
+      FRIGATE_RTSP_USER: ${FRIGATE_RTSP_USER:-rtsp}
+      FRIGATE_RTSP_PASSWORD: ${FRIGATE_RTSP_PASSWORD:-change-me}
+      FRIGATE_CAMERA_HOST: ${FRIGATE_CAMERA_HOST:-192.168.1.48}
+      FRIGATE_RECORD_PATH: ${FRIGATE_RECORD_PATH:-av_stream/ch0}
+      FRIGATE_DETECT_PATH: ${FRIGATE_DETECT_PATH:-av_stream/ch1}
     logging:
       driver: "json-file"
       options:
@@ -38,10 +43,12 @@ services:
     container_name: metis-detector
     restart: unless-stopped
     environment:
-      - MOCK=${MOCK:-1}
+      - MOCK=${MOCK:-0}
       - MODEL_DIR=${MODEL_DIR:-/models/metis_yolo}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ${MODEL_DIR_HOST:-./models}:/models:ro
     ports:
       - "8090:8090"
     read_only: true

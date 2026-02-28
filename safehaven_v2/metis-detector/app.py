@@ -24,7 +24,7 @@ LOGGER = logging.getLogger("metis-detector")
 
 
 class Config:
-    mock = os.getenv("MOCK", "1") == "1"
+    mock = os.getenv("MOCK", "0") == "1"
     model_dir = os.getenv("MODEL_DIR", "")
     log_format = os.getenv("LOG_FORMAT", "text")
     log_level = os.getenv("LOG_LEVEL", "INFO")

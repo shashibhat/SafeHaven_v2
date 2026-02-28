@@ -4,7 +4,7 @@ State semantics service for SafeHaven v2.
 
 ## Features
 
-- Per-camera workers with bounded queue and stale-frame drop policy
+- Per-camera workers with bounded queue and freshness-aware sampling
 - Debounced state machines for:
   - `garage_open/closed`
   - `gate_ajar/closed`
@@ -35,14 +35,6 @@ Reads env + YAML (`SAFEHAVEN_CONFIG`, default `/config/safehaven.yml`):
 pip install -e .
 safehaven-core
 ```
-
-## Local Validation
-
-```bash
-./scripts/demo_mock.sh
-```
-
-Requires `metis-detector` running with `MOCK=1` on `:8090`.
 
 ## Health endpoints
 

@@ -19,7 +19,7 @@ DETECTOR_KEY = "metis"
 class MetisDetectorConfig(BaseDetectorConfig):
     type: Literal[DETECTOR_KEY]
     endpoint: str = Field(
-        default="http://metis-detector:8090/detect", title="Metis HTTP endpoint"
+        default="http://127.0.0.1:8090/detect", title="Metis HTTP endpoint"
     )
     timeout_ms: int = Field(default=200, title="HTTP timeout in milliseconds")
 
@@ -34,6 +34,12 @@ class MetisDetector(DetectionApi):
         self.timeout = detector_config.timeout_ms / 1000.0
         self.session = requests.Session()
         self._zero_result = np.zeros((20, 6), np.float32)
+        self._warned_request_failure = False
+        logger.info(
+            "metis detector initialized: endpoint=%s timeout_ms=%s",
+            self.endpoint,
+            detector_config.timeout_ms,
+        )
 
     def _encode_jpeg(self, tensor_input: np.ndarray) -> bytes | None:
         frame = np.squeeze(tensor_input)
@@ -100,7 +106,15 @@ class MetisDetector(DetectionApi):
             response.raise_for_status()
             payload = response.json()
         except requests.exceptions.RequestException as exc:
-            logger.debug("metis request failed: %s", exc)
+            if not self._warned_request_failure:
+                logger.warning(
+                    "metis request failed at endpoint %s: %s",
+                    self.endpoint,
+                    exc,
+                )
+                self._warned_request_failure = True
+            else:
+                logger.debug("metis request failed: %s", exc)
             return self._zero_result
         except ValueError:
             logger.debug("metis response is not valid JSON")

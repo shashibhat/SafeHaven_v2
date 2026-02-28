@@ -11,13 +11,14 @@
 
 1. Install Docker + Docker Compose
 2. Copy `.env.example` to `.env`
-3. Start stack:
+3. Populate runtime values for camera connectivity and model paths
+4. Start the stack:
    ```bash
    docker compose up --build
    ```
-4. Run local validation path:
+5. Validate configuration assets:
    ```bash
-   make demo-mock
+   make lint-configs
    ```
 
 ## Pull Request Checklist
